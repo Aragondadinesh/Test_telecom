@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: pktuser
+      POSTGRES_PASSWORD: pktpass
+      POSTGRES_DB: packetsdb
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  sniffer:
+    build: ./sniffer
+    # sniffer needs host network and privileges to capture host traffic. Works best on Linux.
+    network_mode: "host"
+    privileged: true
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
+      - IFACE=any
+      - FILTER=
+    depends_on:
+      - rabbitmq
+    volumes:
+      - ./sniffer:/app
+
+  parser:
+    build: ./parser
+    environment:
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_USER=guest
+      - RABBITMQ_PASS=guest
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=packetsdb
+      - POSTGRES_USER=pktuser
+      - POSTGRES_PASS=pktpass
+    depends_on:
+      - rabbitmq
+      - postgres
+    volumes:
+      - ./parser:/app
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_HOST=postgres
+      - POSTGRES_DB=packetsdb
+      - POSTGRES_USER=pktuser
+      - POSTGRES_PASS=pktpass
+    depends_on:
+      - postgres
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:

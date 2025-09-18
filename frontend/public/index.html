@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>Packet Microservices UI</title>
+<style>body{font-family:Arial;margin:12px}table{width:100%;border-collapse:collapse}th,td{padding:6px;border:1px solid #ddd}th{background:#f4f4f4}</style>
+</head>
+<body>
+  <h2>Packet Capture — Microservices Demo</h2>
+  <div>
+    <label>Limit: <input id="limit" value="50" style="width:80px"/></label>
+    <button id="refresh">Refresh</button>
+    <button id="clear">Clear DB</button>
+  </div>
+  <div id="stats" style="margin-top:12px;display:flex;gap:8px"></div>
+  <table id="packets"><thead><tr><th>ID</th><th>Time</th><th>Src</th><th>Dst</th><th>Proto</th><th>Sport</th><th>Dport</th><th>Len</th><th>Info</th></tr></thead><tbody></tbody></table>
+<script>
+async function fetchPackets(){const l=document.getElementById('limit').value||50; const res=await fetch('http://localhost:8000/packets?limit='+l); const data=await res.json(); const tbody=document.querySelector('#packets tbody'); tbody.innerHTML=''; for(const p of data){const tr=document.createElement('tr'); tr.innerHTML=`<td>${p.id}</td><td>${new Date(p.ts*1000).toLocaleString()}</td><td>${p.src||''}</td><td>${p.dst||''}</td><td>${p.proto||''}</td><td>${p.src_port||''}</td><td>${p.dst_port||''}</td><td>${p.length||''}</td><td>${p.info||''}</td>`; tbody.appendChild(tr);} }
+async function fetchStats(){const res=await fetch('http://localhost:8000/stats'); const data=await res.json(); const holder=document.getElementById('stats'); holder.innerHTML=''; for(const k in data){const d=document.createElement('div'); d.style.padding='6px 10px'; d.style.background='#f7f7f7'; d.style.borderRadius='6px'; d.innerText=`${k}: ${data[k]}`; holder.appendChild(d);} }
+document.getElementById('refresh').addEventListener('click', ()=>{fetchPackets(); fetchStats();});
+document.getElementById('clear').addEventListener('click', async ()=>{ if(!confirm('Clear all?')) return; await fetch('http://localhost:8000/clear', {method:'POST'}); fetchPackets(); fetchStats();});
+fetchPackets(); fetchStats(); setInterval(()=>{fetchPackets(); fetchStats();}, 5000);
+</script>
+</body></html>
