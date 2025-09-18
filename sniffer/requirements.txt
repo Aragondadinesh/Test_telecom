@@ -1,2 +1,4 @@
 scapy
 pika
+apt-get update
+apt-get install docker-buildx-plugin -y
